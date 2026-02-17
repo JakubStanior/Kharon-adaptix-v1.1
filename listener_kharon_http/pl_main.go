@@ -1,99 +1,146 @@
 package main
 
 import (
-	"errors"
+"bytes"
+"crypto/rand"
+"encoding/json"
+"errors"
+"strconv"
 
-	"github.com/Adaptix-Framework/axc2"
+adaptix "github.com/Adaptix-Framework/axc2"
 )
 
 type Teamserver interface {
-	TsAgentIsExists(agentId string) bool
-	TsAgentCreate(agentCrc string, agentId string, beat []byte, listenerName string, ExternalIP string, Async bool) (adaptix.AgentData, error)
-	TsAgentSetTick(agentId string) error
-	TsAgentProcessData(agentId string, bodyData []byte) error
-	TsAgentGetHostedAll(agentId string, maxDataSize int) ([]byte, error)
+TsAgentIsExists(agentId string) bool
+TsAgentCreate(agentCrc string, agentId string, beat []byte, listenerName string, ExternalIP string, Async bool) (adaptix.AgentData, error)
+	TsAgentSetTick(agentId string, listenerName string) error
+TsAgentProcessData(agentId string, bodyData []byte) error
+TsAgentGetHostedAll(agentId string, maxDataSize int) ([]byte, error)
 }
 
-type ModuleExtender struct {
-	ts Teamserver
+type PluginListener struct{}
+
+type Listener struct {
+http *HTTP
 }
 
 var (
-	ModuleObject    *ModuleExtender
-	ModuleDir       string
-	ListenerDataDir string
-	ListenersObject []any //*HTTP
+ModuleDir       string
+ListenerDataDir string
+Ts              Teamserver
 )
 
-func InitPlugin(ts any, moduleDir string, listenerDir string) any {
-	ModuleDir = moduleDir
-	ListenerDataDir = listenerDir
-
-	ModuleObject = &ModuleExtender{
-		ts: ts.(Teamserver),
-	}
-	return ModuleObject
+func InitPlugin(ts any, moduleDir string, listenerDir string) adaptix.PluginListener {
+ModuleDir = moduleDir
+ListenerDataDir = listenerDir
+Ts = ts.(Teamserver)
+return &PluginListener{}
 }
 
-func (m *ModuleExtender) ListenerValid(data string) error {
-	return m.HandlerListenerValid(data)
+func (p *PluginListener) Create(name string, config string, customData []byte) (adaptix.ExtenderListener, adaptix.ListenerData, []byte, error) {
+var (
+listenerData adaptix.ListenerData
+conf         HTTPConfig
+customdData  []byte
+err          error
+)
+
+if customData == nil {
+err = json.Unmarshal([]byte(config), &conf)
+if err != nil {
+return nil, listenerData, customdData, err
 }
 
-func (m *ModuleExtender) ListenerStart(name string, data string, listenerCustomData []byte) (adaptix.ListenerData, []byte, error) {
-	listenerData, customData, listener, err := m.HandlerCreateListenerDataAndStart(name, data, listenerCustomData)
-	if err != nil {
-		return listenerData, customData, err
-	}
-
-	ListenersObject = append(ListenersObject, listener)
-
-	return listenerData, customData, nil
+randSlice := make([]byte, 16)
+_, _ = rand.Read(randSlice)
+conf.EncryptKey = randSlice[:16]
+conf.Protocol = "http"
+} else {
+err = json.Unmarshal(customData, &conf)
+if err != nil {
+return nil, listenerData, customdData, err
+}
 }
 
-func (m *ModuleExtender) ListenerEdit(name string, data string) (adaptix.ListenerData, []byte, error) {
-	for _, value := range ListenersObject {
-		listenerData, customData, ok := m.HandlerEditListenerData(name, value, data)
-		if ok {
-			return listenerData, customData, nil
-		}
-	}
-	return adaptix.ListenerData{}, nil, errors.New("listener not found")
+listener := &HTTP{
+Name:   name,
+Config: conf,
+Active: false,
 }
 
-func (m *ModuleExtender) ListenerStop(name string) error {
-	var (
-		index int
-		err   error
-		ok    bool
-	)
-
-	for ind, value := range ListenersObject {
-		ok, err = m.HandlerListenerStop(name, value)
-		if ok {
-			index = ind
-			break
-		}
-	}
-
-	if ok {
-		ListenersObject = append(ListenersObject[:index], ListenersObject[index+1:]...)
-	} else {
-		return errors.New("listener not found")
-	}
-
-	return err
+listenerData = adaptix.ListenerData{
+BindHost:  listener.Config.HostBind,
+BindPort:  strconv.Itoa(listener.Config.PortBind),
+AgentAddr: conf.Callback_addresses,
+Status:    "Stopped",
 }
 
-func (m *ModuleExtender) ListenerGetProfile(name string) ([]byte, error) {
-	for _, value := range ListenersObject {
-		profile, ok := m.HandlerListenerGetProfile(name, value)
-		if ok {
-			return profile, nil
-		}
-	}
-	return nil, errors.New("listener not found")
+if listener.Config.Ssl {
+listenerData.Protocol = "https"
 }
 
-func (m *ModuleExtender) ListenerInteralHandler(name string, data []byte) (string, error) {
-	return "", errors.New("listener not found")
+var buffer bytes.Buffer
+err = json.NewEncoder(&buffer).Encode(listener.Config)
+if err != nil {
+return nil, listenerData, customdData, err
+}
+customdData = buffer.Bytes()
+
+return &Listener{http: listener}, listenerData, customdData, nil
+}
+
+func (l *Listener) Start() error {
+return l.http.Start(Ts)
+}
+
+func (l *Listener) Edit(config string) (adaptix.ListenerData, []byte, error) {
+var (
+listenerData adaptix.ListenerData
+conf         HTTPConfig
+customdData  []byte
+err          error
+)
+
+err = json.Unmarshal([]byte(config), &conf)
+if err != nil {
+return listenerData, customdData, err
+}
+
+l.http.Config.Callback_addresses = conf.Callback_addresses
+
+listenerData = adaptix.ListenerData{
+BindHost:  l.http.Config.HostBind,
+BindPort:  strconv.Itoa(l.http.Config.PortBind),
+AgentAddr: l.http.Config.Callback_addresses,
+Status:    "Listen",
+}
+if !l.http.Active {
+listenerData.Status = "Closed"
+}
+
+var buffer bytes.Buffer
+err = json.NewEncoder(&buffer).Encode(l.http.Config)
+if err != nil {
+return listenerData, customdData, err
+}
+customdData = buffer.Bytes()
+
+return listenerData, customdData, nil
+}
+
+func (l *Listener) Stop() error {
+return l.http.Stop()
+}
+
+func (l *Listener) GetProfile() ([]byte, error) {
+var buffer bytes.Buffer
+err := json.NewEncoder(&buffer).Encode(l.http.Config)
+if err != nil {
+return nil, err
+}
+return buffer.Bytes(), nil
+}
+
+func (l *Listener) InternalHandler(data []byte) (string, error) {
+return "", errors.New("not supported")
 }

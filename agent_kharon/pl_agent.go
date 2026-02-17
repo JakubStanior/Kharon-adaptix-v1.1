@@ -2517,7 +2517,7 @@ func ProcessTasksResult(ts Teamserver, agentData adaptix.AgentData, taskData ada
 							task.MessageType = MESSAGE_ERROR
 							fmt.Printf("Deleting fileID: %d\n", file_id)
 
-							_ = ts.TsDownloadDelete(file_id)
+							_ = ts.TsDownloadDelete([]string{file_id})
 							continue
 						}
 
@@ -2713,7 +2713,7 @@ func ProcessTasksResult(ts Teamserver, agentData adaptix.AgentData, taskData ada
 					if channelID != 0 {
 						if subCmd == COMMAND_TUNNEL_START_TCP {
 							if result == 0 {
-								ts.TsTunnelConnectionClose(int(channelID))
+								ts.TsTunnelConnectionClose(int(channelID), false)
 							} else {
 								ts.TsTunnelConnectionResume(agentData.Id, int(channelID), false)
 							}
@@ -2754,7 +2754,7 @@ func ProcessTasksResult(ts Teamserver, agentData adaptix.AgentData, taskData ada
 							if subCmd == COMMAND_TUNNEL_START_TCP {
 								result := cmd_packer.ParseInt32()
 								if result == 0 {
-									ts.TsTunnelConnectionClose(int(channelID))
+									ts.TsTunnelConnectionClose(int(channelID), false)
 								} else {
 									ts.TsTunnelConnectionResume(agentData.Id, int(channelID), false)
 								}

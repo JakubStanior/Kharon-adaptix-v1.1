@@ -568,7 +568,7 @@ func AgentGenerateBuild(agentConfig string, agentProfile []byte, listenerMap map
 	if strings.EqualFold(cfg.Format, "x86") {
 		target = "x86"
 	}
-	
+
 	if debugMode {
 		target = target + "-debug"
 	}
@@ -1749,38 +1749,38 @@ func CreateTask(ts Teamserver, agent adaptix.AgentData, args map[string]any) (ad
 				}
 			}
 
-		scFile, ok := args["sc_file"].(string)
-		if !ok {
-			err = errors.New("parameter 'sc_file' must be set")
-			goto RET
-		}
+			scFile, ok := args["sc_file"].(string)
+			if !ok {
+				err = errors.New("parameter 'sc_file' must be set")
+				goto RET
+			}
 
-		explicitPid := 0
-		if pidVal, ok := args["pid"]; ok {
-			if pidInt, ok := pidVal.(int); ok {
-				explicitPid = pidInt
+			explicitPid := 0
+			if pidVal, ok := args["pid"]; ok {
+				if pidInt, ok := pidVal.(int); ok {
+					explicitPid = pidInt
+				} else {
+					if pidFloat, ok := pidVal.(float64); ok {
+						explicitPid = int(pidFloat)
+					}
+				}
 			} else {
-				if pidFloat, ok := pidVal.(float64); ok {
-					explicitPid = int(pidFloat)
+				fmt.Printf("[DEBUG] pid arg does NOT exist in args map\n")
+			}
+
+			scContent, err := base64.StdEncoding.DecodeString(scFile)
+			if err != nil {
+				goto RET
+			}
+
+			var params []byte
+			paramData, ok := args["param_data"].(string)
+			if ok {
+				params, err = base64.StdEncoding.DecodeString(paramData)
+				if err != nil {
+					params = []byte(paramData)
 				}
 			}
-		} else {
-			fmt.Printf("[DEBUG] pid arg does NOT exist in args map\n")
-		}
-
-		scContent, err := base64.StdEncoding.DecodeString(scFile)
-		if err != nil {
-			goto RET
-		}
-
-		var params []byte
-		paramData, ok := args["param_data"].(string)
-		if ok {
-			params, err = base64.StdEncoding.DecodeString(paramData)
-			if err != nil {
-				params = []byte(paramData)
-			}
-		}
 
 			array = []interface{}{TASK_POSTEX, int(method_n), int(fork_type_n), int(explicitPid), len(scContent), scContent, len(params), params}
 		default:
@@ -2532,11 +2532,10 @@ func ProcessTasksResult(ts Teamserver, agentData adaptix.AgentData, taskData ada
 							_ = ts.TsDownloadUpdate(file_id, 1, file_bytes)
 							_ = ts.TsDownloadClose(file_id, 3)
 							task.Message += fmt.Sprintf("File '%s' download completed, size: %d bytes\n", file_id, file_size)
-						}else{
+						} else {
 							_ = ts.TsDownloadUpdate(file_id, 1, file_bytes)
 							task.Message += fmt.Sprintf("File '%s', Chunk: %d/%d download completed, size: %d bytes\n", file_id, cur_chunk, total_chunks, file_size)
 						}
-
 
 					}
 
@@ -2740,7 +2739,6 @@ func ProcessTasksResult(ts Teamserver, agentData adaptix.AgentData, taskData ada
 						}
 					}
 
-
 					numEvents_COMMAND_TUNNEL_START_TCP := cmd_packer.ParseInt32()
 					if numEvents_COMMAND_TUNNEL_START_TCP > 0 {
 						fmt.Printf(" TASK_PROCESS_TUNNEL - numEvents_COMMAND_TUNNEL_START_TCP: %d\n", numEvents_COMMAND_TUNNEL_START_TCP)
@@ -2903,7 +2901,7 @@ RET:
 }
 
 func TunnelReverse(tunnelId int, port int) ([]byte, error) {
-	
+
 	array := []interface{}{TASK_RPORTFWD, int(tunnelId), int(port)}
 
 	fmt.Printf("TunnelReverse\n")

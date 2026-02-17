@@ -45,7 +45,7 @@ func uint32ToBytesBE(val uint32) []byte {
 }
 
 func (lc *LokyCrypt) Cycle(block []byte, encrypt bool) {
-	left  := bytesToUint32BE(block[0:4])
+	left := bytesToUint32BE(block[0:4])
 	right := bytesToUint32BE(block[4:8])
 
 	if encrypt {

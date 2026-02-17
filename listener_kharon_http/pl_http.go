@@ -34,20 +34,20 @@ type HTTPConfig struct {
 	SslKeyPath  string `json:"ssl_key_path"`
 
 	// agent
-	Uri 	       string `json:"uri"`
-	HttpMethod 	   string `json:"http_method"`
-	UserAgent 	   string `json:"user_agent"`
+	Uri            string `json:"uri"`
+	HttpMethod     string `json:"http_method"`
+	UserAgent      string `json:"user_agent"`
 	RequestHeaders string `json:"request_headers"`
 
-	ProxyUrl 	  string `json:"proxy_url"`
+	ProxyUrl      string `json:"proxy_url"`
 	ProxyUserName string `json:"proxy_user"`
 	ProxyPassword string `json:"proxy_pass"`
 
 	// server
 	ResponseHeaders map[string]string `json:"response_headers"`
-	Protocol   	    string 		      `json:"protocol"`
-	EncryptKey      []byte 			  `json:"encrypt_key"`
-	Server_headers  string 			  `json:"server_headers"`
+	Protocol        string            `json:"protocol"`
+	EncryptKey      []byte            `json:"encrypt_key"`
+	Server_headers  string            `json:"server_headers"`
 }
 
 type HTTP struct {
@@ -62,31 +62,31 @@ func (handler *HTTP) Start(ts Teamserver) error {
 	var err error = nil
 
 	cfg := handler.Config
-    fmt.Println("=== HTTP CONFIG ===")
-    fmt.Printf("HostBind: %s\n", cfg.HostBind)
-    fmt.Printf("PortBind: %d\n", cfg.PortBind)
-    fmt.Printf("Callback_addresses: %s\n", cfg.Callback_addresses)
-    
-    fmt.Printf("Ssl: %t\n", cfg.Ssl)
-    fmt.Printf("SslCert: %v (length: %d)\n", cfg.SslCert, len(cfg.SslCert))
-    fmt.Printf("SslKey: %v (length: %d)\n", cfg.SslKey, len(cfg.SslKey))
-    fmt.Printf("SslCertPath: %s\n", cfg.SslCertPath)
-    fmt.Printf("SslKeyPath: %s\n", cfg.SslKeyPath)
-    
-    fmt.Printf("Uri: %s\n", cfg.Uri)
-    fmt.Printf("HttpMethod: %s\n", cfg.HttpMethod)
-    fmt.Printf("UserAgent: %s\n", cfg.UserAgent)
-    fmt.Printf("RequestHeaders: %s\n", cfg.RequestHeaders)
-    
-    fmt.Printf("ProxyUrl: %s\n", cfg.ProxyUrl)
-    fmt.Printf("ProxyUserName: %s\n", cfg.ProxyUserName)
-    fmt.Printf("ProxyPassword: %s\n", cfg.ProxyPassword)
-    
-    fmt.Printf("ResponseHeaders: %v\n", cfg.ResponseHeaders)
-    fmt.Printf("Protocol: %s\n", cfg.Protocol)
-    fmt.Printf("EncryptKey: %v (length: %x)\n", cfg.EncryptKey, len(cfg.EncryptKey))
-    fmt.Printf("Server_headers: %s\n", cfg.Server_headers)
-    fmt.Println("===================")
+	fmt.Println("=== HTTP CONFIG ===")
+	fmt.Printf("HostBind: %s\n", cfg.HostBind)
+	fmt.Printf("PortBind: %d\n", cfg.PortBind)
+	fmt.Printf("Callback_addresses: %s\n", cfg.Callback_addresses)
+
+	fmt.Printf("Ssl: %t\n", cfg.Ssl)
+	fmt.Printf("SslCert: %v (length: %d)\n", cfg.SslCert, len(cfg.SslCert))
+	fmt.Printf("SslKey: %v (length: %d)\n", cfg.SslKey, len(cfg.SslKey))
+	fmt.Printf("SslCertPath: %s\n", cfg.SslCertPath)
+	fmt.Printf("SslKeyPath: %s\n", cfg.SslKeyPath)
+
+	fmt.Printf("Uri: %s\n", cfg.Uri)
+	fmt.Printf("HttpMethod: %s\n", cfg.HttpMethod)
+	fmt.Printf("UserAgent: %s\n", cfg.UserAgent)
+	fmt.Printf("RequestHeaders: %s\n", cfg.RequestHeaders)
+
+	fmt.Printf("ProxyUrl: %s\n", cfg.ProxyUrl)
+	fmt.Printf("ProxyUserName: %s\n", cfg.ProxyUserName)
+	fmt.Printf("ProxyPassword: %s\n", cfg.ProxyPassword)
+
+	fmt.Printf("ResponseHeaders: %v\n", cfg.ResponseHeaders)
+	fmt.Printf("Protocol: %s\n", cfg.Protocol)
+	fmt.Printf("EncryptKey: %v (length: %x)\n", cfg.EncryptKey, len(cfg.EncryptKey))
+	fmt.Printf("Server_headers: %s\n", cfg.Server_headers)
+	fmt.Println("===================")
 
 	gin.SetMode(gin.ReleaseMode)
 	router := gin.New()
@@ -120,7 +120,7 @@ func (handler *HTTP) Start(ts Teamserver) error {
 		}
 
 		handler.Config.SslCertPath = listenerPath + "/listener.crt"
-		handler.Config.SslKeyPath  = listenerPath + "/listener.key"
+		handler.Config.SslKeyPath = listenerPath + "/listener.key"
 
 		if len(handler.Config.SslCert) == 0 || len(handler.Config.SslKey) == 0 {
 			err = handler.generateSelfSignedCert(handler.Config.SslCertPath, handler.Config.SslKeyPath)
@@ -210,7 +210,7 @@ func (handler *HTTP) processRequest(ctx *gin.Context) {
 		uris := strings.Split(handler.Config.Uri, "\n")
 		fmt.Printf("[DEBUG] Configured URIs: %v\n", uris)
 		fmt.Printf("[DEBUG] Current path: %s\n", currentPath)
-		
+
 		for _, uri := range uris {
 			uri = strings.TrimSpace(uri)
 			if uri == "" {
@@ -219,14 +219,14 @@ func (handler *HTTP) processRequest(ctx *gin.Context) {
 			if !strings.HasPrefix(uri, "/") {
 				uri = "/" + uri
 			}
-			
+
 			if currentPath == uri {
 				valid = true
 				fmt.Printf("[DEBUG] Path matched URI: %s\n", uri)
 				break
 			}
 		}
-		
+
 		if !valid {
 			fmt.Printf("[WARN] Path '%s' not in allowed URIs\n", currentPath)
 		}
@@ -234,9 +234,9 @@ func (handler *HTTP) processRequest(ctx *gin.Context) {
 
 	if !valid {
 		fmt.Printf("[ERROR] Rejecting request to path: %s\n", currentPath)
-		
+
 		handler.applyServerHeaders(ctx)
-		
+
 		ctx.JSON(404, gin.H{"error": "not found"})
 		return
 	}
@@ -325,9 +325,9 @@ func (handler *HTTP) processRequest(ctx *gin.Context) {
 
 ERR:
 	fmt.Println("[ERROR] Request processing failed")
-	
+
 	handler.applyServerHeaders(ctx)
-	
+
 	ctx.AbortWithStatus(http.StatusInternalServerError)
 	return
 }
@@ -355,7 +355,7 @@ func (handler *HTTP) applyServerHeaders(ctx *gin.Context) {
 			if len(parts) == 2 {
 				key := strings.TrimSpace(parts[0])
 				value := strings.TrimSpace(parts[1])
-				
+
 				if key != "" && value != "" {
 					ctx.Header(key, value)
 				}
